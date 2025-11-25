@@ -1,0 +1,468 @@
+<?php
+
+namespace App\Http\Controllers;
+
+
+use App\Models\User;
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Storage;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
+
+
+
+class UserController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    // public function index()
+    // {
+    //     $users = User::where('role', 'user')->get();
+    //     return view('admin.user.index', compact('users'));
+    // }
+
+
+    public function index(Request $request)
+    {
+        $query = User::where('role', 'user');
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('email', 'like', '%' . $search . '%')
+                    ->orWhere('phone', 'like', '%' . $search . '%')
+                    ->orWhere('comp_name', 'like', '%' . $search . '%')
+                    ->orWhere('city', 'like', '%' . $search . '%');
+            }); // <- closes the closure AND the where call
+        }
+
+        $users = $query->orderBy('id', 'desc')->paginate(10)->appends($request->only('search'));
+
+        return view('admin.user.index', compact('users'));
+    }
+
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        return view('admin.user.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    // public function store(Request $request)
+    // {
+    //     // return $request->all();
+    //     $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'email' => 'required|email|unique:users,email,',
+    //         'company_name' => 'nullable|string|max:255',
+    //         'occupation' => 'nullable|string|max:255',
+    //         'mobile_number' => 'nullable|string|max:15',
+    //         'city' => 'nullable|string|max:255',
+    //     ]);
+
+    //     $user = new User;
+    //     $user->name = $request->name;
+    //     $user->email = $request->email;
+    //     $user->comp_name = $request->company_name;
+    //     $user->occupation = $request->occupation;
+    //     $user->phone = $request->mobile_number;
+    //     $user->city = $request->city;
+    //     //  $user->password = bcrypt('password'); // Default password
+    //     $user->save();
+    //     return redirect()->route('users.index')->with('success', 'User created successfully.');
+    // }
+
+
+
+
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'email' => 'required|email|unique:users,email',
+    //         'company_name' => 'nullable|string|max:255',
+    //         'occupation' => 'nullable|string|max:255',
+    //         'mobile_number' => 'nullable|string|max:15',
+    //         'city' => 'nullable|string|max:255',
+    //     ]);
+
+    //     $user = new User;
+    //     $user->name = $request->name;
+    //     $user->email = $request->email;
+    //     $user->comp_name = $request->company_name;
+    //     $user->occupation = $request->occupation;
+    //     $user->phone = $request->mobile_number;
+    //     $user->city = $request->city;
+    //     $user->save();
+
+    //     // Generate unique QR Code string
+    //     $qrCodeValue = 'USER-' . $user->id . '-' . Str::random(8);
+
+    //     // Image file name
+    //     $fileName = 'qr_' . $user->id . '.png';
+
+    //     // Generate QR and save in public/user_qr folder
+    //     // QrCode::format('png')
+    //     //     ->size(300)
+    //     //     ->generate($qrCodeValue, public_path('users_qr_images/' . $fileName));
+
+    //     QrCode::format('png')
+    //         ->size(300)
+    //         ->errorCorrection('H')
+    //         ->encoding('UTF-8')
+    //         ->generate($qrCodeValue, public_path('users_qr_images/' . $fileName));
+
+
+    //     // Update QR info in database
+    //     $user->qr_code = $qrCodeValue;
+    //     $user->qr_image = $fileName;
+    //     $user->save();
+
+    //     return redirect()->route('users.index')->with('success', 'User created successfully with QR.');
+    // }
+
+
+
+    // public function store(Request $request)
+    // {
+    //     $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'email' => 'required|email|unique:users,email',
+    //         'company_name' => 'nullable|string|max:255',
+    //         'occupation' => 'nullable|string|max:255',
+    //         'mobile_number' => 'nullable|string|max:15',
+    //         'city' => 'nullable|string|max:255',
+    //     ]);
+
+    //     $user = new User;
+    //     $user->name = $request->name;
+    //     $user->email = $request->email;
+    //     $user->comp_name = $request->company_name;
+    //     $user->occupation = $request->occupation;
+    //     $user->phone = $request->mobile_number;
+    //     $user->city = $request->city;
+    //     $user->save();
+
+    //     $qrCodeValue = 'USER-' . $user->id . '-' . Str::random(8);
+
+    //     $fileName = 'qr_' . $user->id . '.png';
+
+    //     $folder = public_path('users_qr_images');
+    //     if (!file_exists($folder)) {
+    //         mkdir($folder, 0777, true);
+    //     }
+
+    //     // Generate QR and save in public/user_qr folder
+    //     QrCode::format('png')
+    //         ->size(300)
+    //         ->errorCorrection('H')
+    //         ->encoding('UTF-8')
+    //         ->generate($qrCodeValue, $folder . '/' . $fileName);
+
+    //     $user->qr_code = $qrCodeValue;
+    //     $user->qr_image = $fileName;
+    //     $user->save();
+
+    //     return redirect()->route('users.index')->with('success', 'User created successfully with QR.');
+    // }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'company_name' => 'nullable|string|max:255',
+            'occupation' => 'nullable|string|max:255',
+            'mobile_number' => 'nullable|string|max:15',
+            'city' => 'nullable|string|max:255',
+        ]);
+
+        $user = new User;
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->comp_name = $request->company_name;
+        $user->occupation = $request->occupation;
+        $user->phone = $request->mobile_number;
+        $user->city = $request->city;
+        $user->save();
+
+        // QR Code will store URL
+        $qrCodeValue = url('/user-details/' . $user->id);
+
+        $fileName = 'qr_' . $user->id . '.svg';
+
+        $folder = public_path('users_qr_images');
+        if (!file_exists($folder)) {
+            mkdir($folder, 0777, true);
+        }
+
+        $svgQr = QrCode::format('svg')->size(300)->generate($qrCodeValue);
+        file_put_contents($folder . '/' . $fileName, $svgQr);
+
+        $user->qr_code = $qrCodeValue;
+        $user->qr_image = $fileName;
+        $user->save();
+
+        return redirect()->route('users.index')->with('success', 'User created successfully with QR.');
+    }
+
+
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(string $id)
+    {
+        //
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(string $id)
+    {
+        $user = User::findOrFail($id);
+        return view('admin.user.edit', compact('user'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, string $id)
+    {
+        //return $request->all();
+        $user = User::findOrFail($id);
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email,',
+            'company_name' => 'nullable|string|max:255',
+            'occupation' => 'nullable|string|max:255',
+            'mobile_number' => 'nullable|string|max:15',
+            'city' => 'nullable|string|max:255',
+        ]);
+
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->comp_name = $request->company_name;
+        $user->occupation = $request->occupation;
+        $user->phone = $request->mobile_number;
+        $user->city = $request->city;
+        //  $user->password = bcrypt('password'); // Default password
+        $user->save();
+
+        return redirect()->route('users.index')->with('success', 'User updated successfully.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(string $id)
+    {
+        $user = User::findOrFail($id);
+        $user->delete();
+
+        return redirect()->route('users.index')->with('success', 'User deleted successfully.');
+    }
+
+    /**
+     * Download ID card for the user.
+     */
+    // public function downloadIdCard($id)
+    // {
+    //     $user = User::findOrFail($id);
+
+    //     $pdf = Pdf::loadView('admin.user.id-card', compact('user'))
+    //         ->setPaper('a6', 'portrait');
+
+    //     return $pdf->download('id-card-' . $user->name . '.pdf');
+    // }
+
+
+
+    // public function downloadIdCard($id)
+    // {
+    //     $user = User::findOrFail($id);
+
+    //     $pdf = Pdf::loadView('admin.user.id-card', compact('user'))
+    //         ->setPaper('a6', 'portrait');
+
+    //     return $pdf->download('id-card-' . $user->name . '.pdf');
+    // }
+
+
+    public function printQR($id)
+    {
+        $user = User::findOrFail($id);
+
+        $data = [
+            'name' => $user->name,
+            'qr_image' => public_path('users_qr_images/' . $user->qr_image),
+        ];
+
+        $pdf = PDF::loadView('admin.user.print', $data)->setPaper('A4', 'portrait');
+
+        return $pdf->download($user->name . '_QR.pdf');
+    }
+
+
+    // public function downloadIdCard($id)
+    // {
+    //     $user = User::findOrFail($id);
+
+    //     $svgTemplatePath = public_path('Front.svg');
+    //     $svgContent = file_get_contents($svgTemplatePath);
+
+    //     // Replace Name
+    //     $svgContent = str_replace('Omkar Kushare', e($user->name), $svgContent);
+
+    //     // Replace QR Code Image
+    //     $qrImagePath = asset('users_qr_images/' . $user->qr_image);
+    //     $qrImageTag = '<image href="' . $qrImagePath . '" x="3600" y="5900" width="2500" height="2500" />';
+
+    //     // Add QR inside placeholder element
+    //     $svgContent = str_replace(
+    //         '<path id="qr-placeholder"',
+    //         $qrImageTag . '<path id="qr-placeholder"',
+    //         $svgContent
+    //     );
+
+    //     return response($svgContent)
+    //         ->header('Content-Type', 'image/svg+xml')
+    //         ->header('Content-Disposition', 'attachment; filename="id-card-' . $user->id . '.svg"');
+    // }
+
+
+    // public function downloadIdCard($id)
+    // {
+    //     $user = User::findOrFail($id);
+
+    //     $svgTemplatePath = public_path('Front.svg');
+    //     $svgContent = file_get_contents($svgTemplatePath);
+
+    //     // Replace Name
+    //     $svgContent = str_replace('Omkar Kushare', e($user->name), $svgContent);
+
+    //     // Convert QR to Base64
+    //     $qrFilePath = public_path('users_qr_images/' . $user->qr_image);
+    //     $qrImageData = base64_encode(file_get_contents($qrFilePath));
+    //     $qrBase64 = 'data:image/svg+xml;base64,' . $qrImageData;
+
+    //     // Replace QR placeholder using <image>
+    //     $qrTag = '<image href="' . $qrBase64 . '" x="3600" y="5900" width="2500" height="2500"/>';
+
+    //     $svgContent = str_replace(
+    //         '<path id="qr-placeholder"',
+    //         $qrTag . '<path id="qr-placeholder"',
+    //         $svgContent
+    //     );
+
+    //     return response($svgContent)
+    //         ->header('Content-Type', 'image/svg+xml')
+    //         ->header('Content-Disposition', 'attachment; filename="id-card-' . $user->id . '.svg"');
+    // }
+
+    // public function downloadIdCard($id)
+    // {
+    //     $user = User::findOrFail($id);
+
+    //     $svgTemplatePath = public_path('Front.svg');
+    //     $svgContent = file_get_contents($svgTemplatePath);
+
+    //     // Replace Name first
+    //     $svgContent = str_replace('Omkar Kushare', e($user->name), $svgContent);
+
+    //     // Local QR image relative path
+    //     $qrImagePath = 'users_qr_images/' . $user->qr_image;
+
+    //     // Insert QR image correctly using xlink
+    //     $qrImageTag = '<image xlink:href="' . $qrImagePath . '" x="3600" y="5900" width="2500" height="2500" />';
+
+    //     // Insert before the placeholder
+    //     $svgContent = preg_replace(
+    //         '/<path id="qr-placeholder"/',
+    //         $qrImageTag . '<path id="qr-placeholder"',
+    //         $svgContent,
+    //         1 // replace first only
+    //     );
+
+    //     return response($svgContent)
+    //         ->header('Content-Type', 'image/svg+xml')
+    //         ->header('Content-Disposition', 'attachment; filename="id-card-' . $user->id . '.svg"');
+    // }
+
+    public function downloadIdCard($id)
+    {
+        $user = User::findOrFail($id);
+
+        $svgTemplatePath = public_path('Front.svg');
+        $svgContent = file_get_contents($svgTemplatePath);
+
+        // Replace Name
+        $svgContent = str_replace('Omkar Kushare', e($user->name), $svgContent);
+
+        // Local relative QR image path
+        $qrImagePath = 'users_qr_images/' . $user->qr_image;
+
+        // QR Image Tag - Same placeholder position (adjustable)
+        $qrImageTag = '<image xlink:href="' . $qrImagePath . '" 
+                        x="3530" 
+                        y="8070" 
+                        width="734" 
+                        height="734" 
+                        preserveAspectRatio="xMidYMid slice" />';
+
+        // Remove the placeholder path & insert QR image instead
+        $svgContent = preg_replace(
+            '/<path id="qr-placeholder"[^>]*>.*?<\/path>/s',
+            $qrImageTag,
+            $svgContent
+        );
+
+        return response($svgContent)
+            ->header('Content-Type', 'image/svg+xml')
+            ->header('Content-Disposition', 'attachment; filename="id-card-' . $user->id . '.svg"');
+    }
+
+
+
+
+
+
+
+    // public function downloadIdCard($id)
+    // {
+    //     $user = User::findOrFail($id);
+
+    //     // Get stored QR Image Path
+    //     $qrImagePath = public_path('users_qr_images/' . $user->qr_image);
+
+    //     // Load ID Card Template SVG
+    //     $svgPath = public_path('idcardfront-2.svg');
+    //     $svgContent = file_get_contents($svgPath);
+
+    //     // Replace placeholders
+    //     $svgContent = str_replace('name-placeholder', $user->name, $svgContent);
+    //     $svgContent = str_replace('qr-placeholder', $qrImagePath, $svgContent);
+
+    //     // Create temp SVG for this user
+    //     $tempSvg = storage_path('app/public/idcard_' . $user->id . '.svg');
+    //     file_put_contents($tempSvg, $svgContent);
+
+    //     // Convert SVG → PDF using DOMPDF
+    //     $pdf = Pdf::loadHTML($svgContent)
+    //         ->setPaper('a6', 'portrait');
+
+    //     return $pdf->download('ID-CARD-' . $user->name . '.pdf');
+    // }
+}
