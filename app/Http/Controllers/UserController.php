@@ -405,26 +405,42 @@ class UserController extends Controller
     {
         $user = User::findOrFail($id);
 
-        $svgTemplatePath = public_path('Front.svg');
+        $svgTemplatePath = public_path('Front 01-03.svg');
         $svgContent = file_get_contents($svgTemplatePath);
 
         // Replace Name
         $svgContent = str_replace('Omkar Kushare', e($user->name), $svgContent);
 
-        // Local relative QR image path
-        $qrImagePath = 'users_qr_images/' . $user->qr_image;
+        // Get the QR image file path
+        $qrImageFilePath = public_path('users_qr_images/' . $user->qr_image);
 
-        // QR Image Tag - Same placeholder position (adjustable)
-        $qrImageTag = '<image xlink:href="' . $qrImagePath . '" 
-                        x="3530" 
-                        y="8070" 
-                        width="734" 
-                        height="734" 
-                        preserveAspectRatio="xMidYMid slice" />';
+        // Check if QR image exists
+        if (file_exists($qrImageFilePath)) {
+            // Read the QR image content and convert to base64
+            $qrImageContent = file_get_contents($qrImageFilePath);
+            $qrBase64 = base64_encode($qrImageContent);
+            
+            // Determine the mime type based on file extension
+            $extension = pathinfo($user->qr_image, PATHINFO_EXTENSION);
+            $mimeType = $extension === 'svg' ? 'image/svg+xml' : 'image/png';
+            
+            // Create data URI with base64 encoded image
+            $qrDataUri = 'data:' . $mimeType . ';base64,' . $qrBase64;
 
-        // Remove the placeholder path & insert QR image instead
+            // QR Image Tag with base64 data URI - using correct position from template
+            $qrImageTag = '<image id="Image_x0020_replace_x0020_here" xlink:href="' . $qrDataUri . '" 
+                            x="3423.27" 
+                            y="5702.26" 
+                            width="3325.31" 
+                            height="3311.16" />';
+        } else {
+            // If QR image doesn't exist, create an empty placeholder
+            $qrImageTag = '<image id="Image_x0020_replace_x0020_here" x="3423.27" y="5702.26" width="3325.31" height="3311.16" xlink:href="" />';
+        }
+
+        // Replace the image placeholder with QR code
         $svgContent = preg_replace(
-            '/<path id="qr-placeholder"[^>]*>.*?<\/path>/s',
+            '/<image id="Image_x0020_replace_x0020_here"[^>]*\/>/s',
             $qrImageTag,
             $svgContent
         );
